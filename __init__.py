@@ -1,5 +1,5 @@
-from .liveportrait_api import ClarityAIUpscaler
+from .liveportrait_api import ReplicateLivePortrait
 
 NODE_CLASS_MAPPINGS = {
-    "Clarity AI Upscaler": ClarityAIUpscaler,
+    "LightSketch Live Portrait": ReplicateLivePortrait,
 }

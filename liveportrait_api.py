@@ -1,12 +1,12 @@
-import requests
-from requests.models import PreparedRequest
-from PIL import Image
-import numpy as np
-import torch
-from torchvision.transforms import ToPILImage
-from io import BytesIO
 import os
 import time
+from io import BytesIO
+
+import numpy as np
+import requests
+import torch
+from PIL import Image
+from requests.models import PreparedRequest
 
 API_KEY = os.environ.get("REPLICATE_API_TOKEN")
 
@@ -28,7 +28,7 @@ except Exception as e:
 ROOT_API = "https://api.replicate.com/v1/predictions"
 
 
-class ClarityBase:
+class ReplicateBase:
     API_ENDPOINT = ""
     POLL_ENDPOINT = ""
     ACCEPT = ""
@@ -39,9 +39,10 @@ class ClarityBase:
 
     RETURN_TYPES = ("IMAGE",)
     FUNCTION = "call"
-    CATEGORY = "Clarity AI"
+    CATEGORY = "REPLICATE"
 
     def call(self, *args, **kwargs):
+        print('TEST')
 
         data = None
 
@@ -159,7 +160,7 @@ class ClarityBase:
         }
 
 
-class ReplicateLivePortrait(ClarityBase):
+class ReplicateLivePortrait(ReplicateBase):
     API_ENDPOINT = ""
     POLL_ENDPOINT = ""
     ACCEPT = "video/*"
