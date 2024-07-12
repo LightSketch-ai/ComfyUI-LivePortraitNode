@@ -14,6 +14,8 @@ from .utils import BIGMAX, DIMMAX, calculate_file_hash, get_sorted_dir_files_fro
 
 video_extensions = ['webm', 'mp4', 'mkv', 'gif']
 
+image_extensions = ['png', 'jpg', 'jpeg']
+
 
 def is_gif(filename) -> bool:
     file_parts = filename.split('.')
@@ -219,28 +221,40 @@ def load_video_cv(video: str, force_rate: int, force_size: str,
 
 
 class LoadVideoUpload:
+    def __init__(self):
+        self.type = "output"
+
     @classmethod
     def INPUT_TYPES(s):
         input_dir = folder_paths.get_input_directory()
-        files = []
+        vid_files = []
+        img_files = []
         for f in os.listdir(input_dir):
             if os.path.isfile(os.path.join(input_dir, f)):
                 file_parts = f.split('.')
                 if len(file_parts) > 1 and (file_parts[-1] in video_extensions):
-                    files.append(f)
+                    vid_files.append(f)
+                elif len(file_parts) > 1 and file_parts[-1] in image_extensions:
+                    img_files.append(f)
         return {"required": {
-                    "video": (sorted(files),),
-                        "test": ("INT", {"default": 0, "min": 0, "max": 60, "step": 1}),
-                     "force_size": (["Disabled", "Custom Height", "Custom Width", "Custom", "256x?", "?x256", "256x256", "512x?", "?x512", "512x512"],),
-                     "custom_width": ("INT", {"default": 512, "min": 0, "max": DIMMAX, "step": 8}),
-                     "custom_height": ("INT", {"default": 512, "min": 0, "max": DIMMAX, "step": 8}),
-                     "frame_load_cap": ("INT", {"default": 0, "min": 0, "max": BIGMAX, "step": 1}),
-                     "skip_first_frames": ("INT", {"default": 0, "min": 0, "max": BIGMAX, "step": 1}),
-                     "select_every_nth": ("INT", {"default": 1, "min": 1, "max": BIGMAX, "step": 1}),
+                    "video": (sorted(vid_files),),
+                    "test": ("INT", {"default": 0, "min": 0, "max": 60, "step": 1}),
                      },
                 "optional": {
-                    "meta_batch": ("VHS_BatchManager",),
-                    "vae": ("VAE",),
+                    "live_portrait_dsize": ("INT", {"default": 512}),
+                    "live_portrait_scale": ("FLOAT", {"default": 2.3}),
+                    "video_frame_load_cap": ("INT", {"default": 128}),
+                    "live_portrait_lip_zero": ("BOOL", {"default": True}),
+                    "live_portrait_relative": ("BOOL", {"default": True}),
+                    "live_portrait_vx_ratio": ("FLOAT", {"default": 0}),
+                    "live_portrait_vy_ratio": ("FLOAT", {"default": -0.12}),
+                    "live_portrait_stitching": ("BOOL", {"default": True}),
+                    "video_select_every_n_frames": ("INT", {"default": 1}),
+                    "live_portrait_eye_retargeting": ("BOOL", {"default": False}),
+                    "live_portrait_lip_retargeting": ("BOOL", {"default": False}),
+                    "live_portrait_lip_retargeting_multiplier": ("FLOAT", {"default": 1}),
+                    "live_portrait_eyes_retargeting_multiplier": ("FLOAT", {"default": 1}),
+                    "api_key_override": ("STRING", {"multiline": False}),
                 },
                 "hidden": {
                     "unique_id": "UNIQUE_ID"
@@ -249,12 +263,12 @@ class LoadVideoUpload:
 
     CATEGORY = "Video Helper Suite 🎥🅥🅗🅢"
 
-    RETURN_TYPES = ["VIDEO"]
-    RETURN_NAMES = ["video"]
+    RETURN_TYPES = ()
+    OUTPUT_NODE = True
 
-    FUNCTION = "load_video"
+    FUNCTION = "submit_video"
 
-    def load_video(self, **kwargs):
+    def submit_video(self, **kwargs):
         kwargs['video'] = folder_paths.get_annotated_filepath(strip_path(kwargs['video']))
         return load_video_cv(**kwargs)
 
