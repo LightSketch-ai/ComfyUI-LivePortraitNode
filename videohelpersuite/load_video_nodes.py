@@ -249,8 +249,8 @@ class LoadVideoUpload:
 
     CATEGORY = "Video Helper Suite 🎥🅥🅗🅢"
 
-    RETURN_TYPES = "VIDEO"
-    RETURN_NAMES = "video"
+    RETURN_TYPES = ["VIDEO"]
+    RETURN_NAMES = ["video"]
 
     FUNCTION = "load_video"
 
