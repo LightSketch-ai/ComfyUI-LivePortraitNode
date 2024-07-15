@@ -6,10 +6,12 @@ import numpy as np
 import requests
 import torch
 from PIL import Image
-from requests.models import PreparedRequest
+import replicate
+
+import folder_paths
 
 API_KEY = os.environ.get("REPLICATE_API_TOKEN")
-
+video_extensions = ["mp4", "mov", "avi", "mkv", "webm"]
 # Check for API key in file as a backup, not recommended
 try:
     if not API_KEY:
@@ -28,98 +30,145 @@ except Exception as e:
 ROOT_API = "https://api.replicate.com/v1/predictions"
 
 
+class PreviewVideo:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {"required": {
+            "video": ("VIDEO",),
+        }}
+
+    CATEGORY = "LightSketch"
+    DESCRIPTION = "hello world!"
+
+    RETURN_TYPES = ()
+
+    OUTPUT_NODE = True
+
+    FUNCTION = "load_video"
+
+    def load_video(self, video):
+        print('Loading video......')
+        print(video)
+        video_name = os.path.basename(video)
+        video_path_name = os.path.basename(os.path.dirname(video))
+        return {"ui": {"video": [video_name, video_path_name]}}
+
 class ReplicateBase:
     API_ENDPOINT = ""
     POLL_ENDPOINT = ""
     ACCEPT = ""
 
+    def __init__(self):
+        print('Initializing......')
+
     @classmethod
     def INPUT_TYPES(cls):
-        return cls.INPUT_SPEC
+        input_dir = folder_paths.get_input_directory()
+        vid_files = []
+        for f in os.listdir(input_dir):
+            if os.path.isfile(os.path.join(input_dir, f)):
+                file_parts = f.split('.')
+                if len(file_parts) > 1 and (file_parts[-1] in video_extensions):
+                    vid_files.append(f)
+        return {
+            "required": {
+                "face_image": ("IMAGE", ),
+                "video": (sorted(vid_files),),
+            },
+            "optional": {
+                "live_portrait_dsize": ("INT", {"default": 512}),
+                "live_portrait_scale": ("FLOAT", {"default": 2.3}),
+                "video_frame_load_cap": ("INT", {"default": 128}),
+                "live_portrait_lip_zero": ("BOOLEAN", {"default": True}),
+                "live_portrait_relative": ("BOOLEAN", {"default": True}),
+                "live_portrait_vx_ratio": ("FLOAT", {"default": 0}),
+                "live_portrait_vy_ratio": ("FLOAT", {"default": -0.12}),
+                "live_portrait_stitching": ("BOOLEAN", {"default": True}),
+                "video_select_every_n_frames": ("INT", {"default": 1}),
+                "live_portrait_eye_retargeting": ("BOOLEAN", {"default": False}),
+                "live_portrait_lip_retargeting": ("BOOLEAN", {"default": False}),
+                "live_portrait_lip_retargeting_multiplier": ("FLOAT", {"default": 1}),
+                "live_portrait_eyes_retargeting_multiplier": ("FLOAT", {"default": 1}),
+                "api_key_override": ("STRING", {"multiline": False}),
+            }
+        }
 
-    RETURN_TYPES = ("IMAGE",)
+    RETURN_TYPES = ("VIDEO",)
+    RETURN_NAMES = ("video",)
     FUNCTION = "call"
-    CATEGORY = "REPLICATE"
+    CATEGORY = "LightSketch"
 
     def call(self, *args, **kwargs):
-        print('TEST')
-
-        data = None
-
         # Check for required arguments
         face_image = kwargs.get('face_image')
-        driving_video = kwargs.get('driving_video')
+        video = kwargs.get('video')
 
-        if face_image is None or driving_video is None:
-            raise ValueError("Both face_image and driving_video are required.")
+        if face_image is None or video is None:
+            raise ValueError("Both face_image and video are required.")
 
         kwargs['comfyui'] = True
 
-        headers = {
-            "Authorization": f"Bearer {API_KEY}",
-            "Content-Type": "application/json"
-        }
+        api_key = os.environ.get("REPLICATE_API_TOKEN")
 
         if kwargs.get("api_key_override"):
-            headers = {
-                "Authorization": f"Bearer {kwargs.get('api_key_override')}",
-                "Content-Type": "application/json"
+            api_key = kwargs.get("api_key_override")
+
+
+        if api_key is None:
+            raise ValueError("API Key is required to use Replicate API. \nPlease set the REPLICATE_API_TOKEN environment variable to your API key or place in replicate_api_key.txt.")
+
+        replicate_client = replicate.Client(api_token=api_key)
+
+        # Convert face_image to bytes given that it is a tensor
+        # Assuming face_image is a tensor or ndarray
+        face_image = face_image.numpy()  # Convert to numpy array if it's a tensor
+        face_image = (face_image * 255).astype(np.uint8)
+
+        # Check the shape and squeeze unnecessary dimensions
+        face_image = np.squeeze(face_image)
+
+        # Now face_image should be of shape (height, width, channels)
+        face_image = Image.fromarray(face_image)
+        buffered = BytesIO()
+        face_image.save(buffered, format="PNG")
+        buffered.seek(0)
+
+        output = replicate_client.run("lightsketch-ai/live-portrait:f4ebc0d95243b1cd5d904f63bf199d4bb587ce676ccfda59e7b5d58be3d08b2b",
+           input={
+            "face_image": buffered,
+            "driving_video": open(folder_paths.get_input_directory() + '/' + kwargs.get('video'), 'rb'),
+            "live_portrait_dsize": kwargs.get('live_portrait_dsize', 512),
+            "live_portrait_scale": kwargs.get('live_portrait_scale', 2.3),
+            "video_frame_load_cap": kwargs.get('video_frame_load_cap', 128),
+            "live_portrait_lip_zero": kwargs.get('live_portrait_lip_zero', True),
+            "live_portrait_relative": kwargs.get('live_portrait_relative', True),
+            "live_portrait_vx_ratio": kwargs.get('live_portrait_vx_ratio', 0),
+            "live_portrait_vy_ratio": kwargs.get('live_portrait_vy_ratio', -0.12),
+            "live_portrait_stitching": kwargs.get('live_portrait_stitching', True),
+            "video_select_every_n_frames": kwargs.get('video_select_every_n_frames', 1),
+            "live_portrait_eye_retargeting": kwargs.get('live_portrait_eye_retargeting', False),
+            "live_portrait_lip_retargeting": kwargs.get('live_portrait_lip_retargeting', False),
+            "live_portrait_lip_retargeting_multiplier": kwargs.get('live_portrait_lip_retargeting_multiplier', 1),
+            "live_portrait_eyes_retargeting_multiplier": kwargs.get('live_portrait_eyes_retargeting_multiplier', 1)
             }
+        )
+        print(output)
 
-        if headers.get("Authorization") is None:
-            raise Exception(
-                f"No Replicate API key set.\n\nUse your Replicate API key by:\n1. Setting the REPLICATE_API_TOKEN environment variable to your API key\n3. Placing inside replicate_api_key.txt\n4. Passing the API key as an argument to the function with the key 'api_key_override'")
+        # Given that output[0] is a url, save the video to the output_video folder (create that folder if doesn't exist)
+        output_video_dir = 'output'
+        if not os.path.exists(output_video_dir):
+            os.makedirs(output_video_dir)
 
-        data = self._get_data(**kwargs)
+        # Create a name for the video based on the current time
+        curr_time = time.time()
 
-        req = PreparedRequest()
-        req.prepare_method('POST')
-        req.prepare_url(f"{ROOT_API}", None)
-        req.prepare_headers(headers)
-        req.prepare_body(data=data, files=None)
-        response = requests.Session().send(req)
+        vid_name = f'output_{curr_time}.mp4'
 
-        if response.status_code == 200:
-            if self.POLL_ENDPOINT != "":
-                id = response.json().get("id")
-                timeout = 550
-                start_time = time.time()
-                while True:
-                    response = requests.get(f"{ROOT_API}{self.POLL_ENDPOINT}{id}", headers=headers, timeout=timeout)
-                    if response.status_code == 200:
-                        print("took time: ", time.time() - start_time)
-                        if self.ACCEPT == "image/*":
-                            return self._return_image(response)
-                        if self.ACCEPT == "video/*":
-                            return self._return_video(response)
-                        break
-                    elif response.status_code == 202:
-                        time.sleep(10)
-                    elif time.time() - start_time > timeout:
-                        raise Exception("Replicate API Timeout: Request took too long to complete")
-                    else:
-                        error_info = response.json()
-                        raise Exception(f"Replicate API Error: {error_info}")
-            else:
-                result_image = Image.open(BytesIO(response.content))
-                result_image = result_image.convert("RGBA")
-                result_image = np.array(result_image).astype(np.float32) / 255.0
-                result_image = torch.from_numpy(result_image)[None,]
-                return (result_image,)
-        else:
-            print("Fehler!! Status Code:", response.status_code)
-            error_info = response.text
-            print("error_info: " + error_info)
-            if response.status_code == 401:
-                raise Exception(
-                    "Replicate API Error: Unauthorized.\n\nUse your Replicate API key by:\n1. Setting the REPLICATE_API_TOKEN environment variable to your API key\n3. Placing inside replicate_api_key.txt\n4. Passing the API key as an argument to the function with the key 'api_key_override' \n\n \n\n")
-            if response.status_code == 402:
-                raise Exception(
-                    "Replicate API Error: Not enough credits.\n\nPlease ensure your Replicate API account has enough credits to complete this action. \n\n \n\n")
-            if response.status_code == 400:
-                raise Exception(f"Replicate API Error: Bad request.\n\n{error_info} \n\n \n\n")
-            else:
-                raise Exception(f"Replicate API Error: {error_info}")
+        output_video_path = os.path.join(output_video_dir, vid_name)
+        with open(output_video_path, 'wb') as f:
+            f.write(requests.get(output[0]).content)
+
+        return (output_video_path,)
 
     def _return_image(self, response):
         result_image = Image.open(BytesIO(response.content))
@@ -139,10 +188,10 @@ class ReplicateBase:
 
     def _get_data(self, **kwargs):
         return {
-            "version": "067dd98cc3e5cb396c4a9efb4bba3eec6c4a9d271211325c477518fc6485e146",
+            "version": "f4ebc0d95243b1cd5d904f63bf199d4bb587ce676ccfda59e7b5d58be3d08b2b",
             "input": {
                 "face_image": kwargs.get('face_image'),
-                "driving_video": kwargs.get('driving_video'),
+                "video": kwargs.get('video'),
                 "live_portrait_dsize": kwargs.get('live_portrait_dsize', 512),
                 "live_portrait_scale": kwargs.get('live_portrait_scale', 2.3),
                 "video_frame_load_cap": kwargs.get('video_frame_load_cap', 128),
@@ -166,21 +215,21 @@ class ReplicateLivePortrait(ReplicateBase):
     ACCEPT = "video/*"
     INPUT_SPEC = {
         "required": {
-            "face_image": ("STRING",),
-            "driving_video": ("STRING",),
+            "face_image": ("STRING", {"default": 'test'}),
+            "video": ("STRING", {"default": 'test'}),
         },
         "optional": {
             "live_portrait_dsize": ("INT", {"default": 512}),
             "live_portrait_scale": ("FLOAT", {"default": 2.3}),
             "video_frame_load_cap": ("INT", {"default": 128}),
-            "live_portrait_lip_zero": ("BOOL", {"default": True}),
-            "live_portrait_relative": ("BOOL", {"default": True}),
+            "live_portrait_lip_zero": ("BOOLEAN", {"default": True}),
+            "live_portrait_relative": ("BOOLEAN", {"default": True}),
             "live_portrait_vx_ratio": ("FLOAT", {"default": 0}),
             "live_portrait_vy_ratio": ("FLOAT", {"default": -0.12}),
-            "live_portrait_stitching": ("BOOL", {"default": True}),
+            "live_portrait_stitching": ("BOOLEAN", {"default": True}),
             "video_select_every_n_frames": ("INT", {"default": 1}),
-            "live_portrait_eye_retargeting": ("BOOL", {"default": False}),
-            "live_portrait_lip_retargeting": ("BOOL", {"default": False}),
+            "live_portrait_eye_retargeting": ("BOOLEAN", {"default": False}),
+            "live_portrait_lip_retargeting": ("BOOLEAN", {"default": False}),
             "live_portrait_lip_retargeting_multiplier": ("FLOAT", {"default": 1}),
             "live_portrait_eyes_retargeting_multiplier": ("FLOAT", {"default": 1}),
             "api_key_override": ("STRING", {"multiline": False}),
