@@ -144,7 +144,7 @@ function previewVideo(node,file,type){
 app.registerExtension({
 	name: "LightSketch.VideoPreviewer",
 	async beforeRegisterNodeDef(nodeType, nodeData, app) {
-		if (nodeData?.name == "PreviewVideo") {
+		if (nodeData?.name == "Preview Video") {
 			nodeType.prototype.onExecuted = function (data) {
 				previewVideo(this, data.video[0], data.video[1]);
 			}
