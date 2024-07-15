@@ -1,6 +1,6 @@
-from .liveportrait_api import ReplicateLivePortrait, PreviewVideo
+from .liveportrait_api import LightSketchLivePortrait, PreviewVideo
 WEB_DIRECTORY = "./web"
 NODE_CLASS_MAPPINGS = {
-    "LightSketch Live Portrait": ReplicateLivePortrait,
+    "LightSketch Live Portrait": LightSketchLivePortrait,
     "PreviewVideo": PreviewVideo
 }

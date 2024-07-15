@@ -142,7 +142,7 @@ function previewVideo(node,file,type){
 }
 
 app.registerExtension({
-	name: "IP_LAP.VideoPreviewer",
+	name: "LightSketch.VideoPreviewer",
 	async beforeRegisterNodeDef(nodeType, nodeData, app) {
 		if (nodeData?.name == "PreviewVideo") {
 			nodeType.prototype.onExecuted = function (data) {

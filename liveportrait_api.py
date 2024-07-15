@@ -53,13 +53,10 @@ class PreviewVideo:
         video_path_name = os.path.basename(os.path.dirname(video))
         return {"ui": {"video": [video_name, video_path_name]}}
 
-class ReplicateBase:
+class LightSketchLivePortrait:
     API_ENDPOINT = ""
     POLL_ENDPOINT = ""
-    ACCEPT = ""
-
-    def __init__(self):
-        print('Initializing......')
+    ACCEPT = "video/*"
 
     @classmethod
     def INPUT_TYPES(cls):
@@ -207,31 +204,3 @@ class ReplicateBase:
                 "live_portrait_eyes_retargeting_multiplier": kwargs.get('live_portrait_eyes_retargeting_multiplier', 1)
             }
         }
-
-
-class ReplicateLivePortrait(ReplicateBase):
-    API_ENDPOINT = ""
-    POLL_ENDPOINT = ""
-    ACCEPT = "video/*"
-    INPUT_SPEC = {
-        "required": {
-            "face_image": ("STRING", {"default": 'test'}),
-            "video": ("STRING", {"default": 'test'}),
-        },
-        "optional": {
-            "live_portrait_dsize": ("INT", {"default": 512}),
-            "live_portrait_scale": ("FLOAT", {"default": 2.3}),
-            "video_frame_load_cap": ("INT", {"default": 128}),
-            "live_portrait_lip_zero": ("BOOLEAN", {"default": True}),
-            "live_portrait_relative": ("BOOLEAN", {"default": True}),
-            "live_portrait_vx_ratio": ("FLOAT", {"default": 0}),
-            "live_portrait_vy_ratio": ("FLOAT", {"default": -0.12}),
-            "live_portrait_stitching": ("BOOLEAN", {"default": True}),
-            "video_select_every_n_frames": ("INT", {"default": 1}),
-            "live_portrait_eye_retargeting": ("BOOLEAN", {"default": False}),
-            "live_portrait_lip_retargeting": ("BOOLEAN", {"default": False}),
-            "live_portrait_lip_retargeting_multiplier": ("FLOAT", {"default": 1}),
-            "live_portrait_eyes_retargeting_multiplier": ("FLOAT", {"default": 1}),
-            "api_key_override": ("STRING", {"multiline": False}),
-        }
-    }
