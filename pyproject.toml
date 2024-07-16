@@ -1,0 +1,15 @@
+[project]
+name = "comfyui-liveportraitnode"
+description = "Two simple to install nodes to get Live Portrait working in ComfyUI without the need for a fancy GPU (Replicate account needed)."
+version = "1.0.0"
+license = "LICENSE"
+dependencies = ["opencv-python", "imageio-ffmpeg"]
+
+[project.urls]
+Repository = "https://github.com/LightSketch-ai/ComfyUI-LivePortraitNode"
+#  Used by Comfy Registry https://comfyregistry.org
+
+[tool.comfy]
+PublisherId = ""
+DisplayName = "ComfyUI-LivePortraitNode"
+Icon = ""
